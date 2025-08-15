@@ -6,18 +6,33 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, PlusCircle, Trash2, User, Book } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+async function extractTextFromPDF(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => ('str' in item ? item.str : '')).join(' ') + '\n';
+  }
+  return text;
+}
+
 
 export default function DocumentManager() {
   const { username, documents, addDocument, removeDocument, logout } = useApp();
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    const reader = new FileReader();
     
     if (documents.some(doc => doc.name === file.name)) {
         toast({
@@ -29,32 +44,42 @@ export default function DocumentManager() {
         return;
     }
 
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      if (content) {
-        addDocument({ name: file.name, content });
-        toast({
-          title: "Success",
-          description: `Document "${file.name}" uploaded successfully.`,
-        });
-      } else {
+    try {
+        let content = '';
+        if (file.type === 'application/pdf') {
+            content = await extractTextFromPDF(file);
+        } else {
+            content = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result as string);
+                reader.onerror = (e) => reject(new Error("Failed to read the file."));
+                reader.readAsText(file);
+            });
+        }
+        
+        if (content) {
+            addDocument({ name: file.name, content });
+            toast({
+                title: "Success",
+                description: `Document "${file.name}" uploaded successfully.`,
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Upload Error",
+                description: `Could not extract content from "${file.name}".`,
+            });
+        }
+    } catch (error) {
+        console.error("File processing error:", error);
         toast({
             variant: "destructive",
             title: "Upload Error",
-            description: `Could not read the content of "${file.name}".`,
+            description: `Failed to process the file "${file.name}".`,
         });
-      }
-      if(fileInputRef.current) fileInputRef.current.value = "";
-    };
-    reader.onerror = () => {
-        toast({
-            variant: "destructive",
-            title: "Upload Error",
-            description: `Failed to read the file "${file.name}".`,
-        });
+    } finally {
         if(fileInputRef.current) fileInputRef.current.value = "";
     }
-    reader.readAsText(file);
   };
 
   const triggerFileInput = () => {
@@ -87,7 +112,7 @@ export default function DocumentManager() {
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
-          accept=".txt,.md,.text"
+          accept=".txt,.md,.text,.pdf"
         />
 
         <ScrollArea className="h-[calc(100vh-320px)]">
