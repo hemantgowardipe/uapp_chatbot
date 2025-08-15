@@ -26,6 +26,7 @@ interface AppContextType {
   addDocument: (doc: Omit<Document, 'id'>) => void;
   removeDocument: (docId: string) => void;
   addMessage: (message: Omit<Message, 'id'>) => string;
+  updateMessage: (messageId: string, updates: Partial<Omit<Message, 'id'>>) => void;
   isInitialized: boolean;
 }
 
@@ -103,6 +104,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return id;
   };
 
+  const updateMessage = (messageId: string, updates: Partial<Omit<Message, 'id'>>) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, ...updates } : msg
+      )
+    );
+  };
+
   const value = {
     username,
     documents,
@@ -112,6 +121,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addDocument,
     removeDocument,
     addMessage,
+    updateMessage,
     isInitialized,
   };
 

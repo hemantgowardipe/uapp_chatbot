@@ -10,11 +10,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send } from 'lucide-react';
 import ChatMessage from './chat-message';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { AnswerQuestionsOutput } from '@/ai/flows/answer-questions';
 
 export default function ChatInterface() {
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
-  const { documents, messages, addMessage } = useApp();
+  const { documents, messages, addMessage, updateMessage } = useApp();
   const { toast } = useToast();
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
@@ -45,21 +46,45 @@ export default function ChatInterface() {
     setInput('');
     setIsLoading(true);
 
+    const assistantMessageId = addMessage({ role: 'assistant', content: '' });
+
     try {
       const response = await answerQuestions({
         documents: documents.map(({ name, content }) => ({ name, content })),
         question: userMessageContent,
       });
 
-      addMessage({
-        role: 'assistant',
-        content: response.answer,
-        sources: response.sources,
-      });
+      if (!response.body) {
+        throw new Error("The response body is empty.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedResponse = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        accumulatedResponse += decoder.decode(value, { stream: true });
+        
+        try {
+          const parsed = JSON.parse(accumulatedResponse) as AnswerQuestionsOutput;
+          updateMessage(assistantMessageId, {
+            content: parsed.answer,
+            sources: parsed.sources,
+          });
+        } catch (e) {
+          // This is expected if the JSON is not yet complete
+          updateMessage(assistantMessageId, {
+            content: accumulatedResponse,
+          });
+        }
+      }
+
     } catch (error) {
       console.error('Error answering question:', error);
-      addMessage({
-        role: 'assistant',
+      updateMessage(assistantMessageId, {
         content: 'Sorry, I encountered an error while processing your question. Please try again.',
       });
       toast({
@@ -85,7 +110,7 @@ export default function ChatInterface() {
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
-          {isLoading && <ChatMessage isLoading />}
+          {isLoading && messages[messages.length-1]?.role !== 'assistant' && <ChatMessage isLoading />}
         </div>
       </ScrollArea>
       <div className="p-4 border-t bg-background">
