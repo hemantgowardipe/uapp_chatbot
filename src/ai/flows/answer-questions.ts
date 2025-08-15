@@ -45,7 +45,7 @@ const prompt = ai.definePrompt({
   name: 'answerQuestionsPrompt',
   input: {schema: AnswerQuestionsInputSchema},
   output: {schema: AnswerQuestionsOutputSchema},
-  prompt: `You are a helpful chatbot that answers questions based on the provided documents.  You MUST ONLY use information from the documents.  If the answer is not contained in the documents, say you cannot answer the question.  You MUST cite your sources.
+  prompt: `You are a helpful AI assistant for working with documents. Your tasks include answering questions, summarizing, analyzing, and providing suggestions based on the provided documents. When answering, you should primarily use the information within the documents. However, you can also use your general knowledge to provide helpful analysis, critiques, and suggestions for improvement. When you pull information directly from a document, you MUST cite your sources.
 
 Documents:
 {{#each documents}}
