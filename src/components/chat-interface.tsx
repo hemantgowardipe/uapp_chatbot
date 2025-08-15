@@ -10,12 +10,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send } from 'lucide-react';
 import ChatMessage from './chat-message';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { AnswerQuestionsOutput } from '@/ai/flows/answer-questions';
 
 export default function ChatInterface() {
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
-  const { documents, messages, addMessage, updateMessage } = useApp();
+  const { documents, messages, addMessage, updateMessage, streamMessage } = useApp();
   const { toast } = useToast();
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
@@ -47,40 +46,23 @@ export default function ChatInterface() {
     setIsLoading(true);
 
     const assistantMessageId = addMessage({ role: 'assistant', content: '' });
+    let accumulatedResponse = "";
 
     try {
-      const response = await answerQuestions({
+      const finalResponse = await answerQuestions({
         documents: documents.map(({ name, content }) => ({ name, content })),
         question: userMessageContent,
+      }, async (chunk) => {
+        accumulatedResponse += chunk;
+        updateMessage(assistantMessageId, {
+            content: accumulatedResponse,
+        });
       });
 
-      if (!response.body) {
-        throw new Error("The response body is empty.");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedResponse = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        accumulatedResponse += decoder.decode(value, { stream: true });
-        
-        try {
-          const parsed = JSON.parse(accumulatedResponse) as AnswerQuestionsOutput;
-          updateMessage(assistantMessageId, {
-            content: parsed.answer,
-            sources: parsed.sources,
-          });
-        } catch (e) {
-          // This is expected if the JSON is not yet complete
-          updateMessage(assistantMessageId, {
-            content: accumulatedResponse,
-          });
-        }
-      }
+      updateMessage(assistantMessageId, {
+        content: finalResponse.answer,
+        sources: finalResponse.sources,
+      });
 
     } catch (error) {
       console.error('Error answering question:', error);

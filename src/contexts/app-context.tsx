@@ -27,6 +27,7 @@ interface AppContextType {
   removeDocument: (docId: string) => void;
   addMessage: (message: Omit<Message, 'id'>) => string;
   updateMessage: (messageId: string, updates: Partial<Omit<Message, 'id'>>) => void;
+  streamMessage: (messageId: string, chunk: string) => void;
   isInitialized: boolean;
 }
 
@@ -112,6 +113,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const streamMessage = (messageId: string, chunk: string) => {
+    setMessages((prev) => {
+        const messageIndex = prev.findIndex((msg) => msg.id === messageId);
+        if (messageIndex === -1) return prev;
+    
+        const currentMessage = prev[messageIndex];
+        const newContent = (currentMessage.content || '') + chunk;
+
+        return prev.map((msg) =>
+            msg.id === messageId ? { ...msg, content: newContent } : msg
+        );
+    });
+  };
+
   const value = {
     username,
     documents,
@@ -122,6 +137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     removeDocument,
     addMessage,
     updateMessage,
+    streamMessage,
     isInitialized,
   };
 

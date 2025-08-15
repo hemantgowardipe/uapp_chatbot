@@ -37,8 +37,11 @@ const AnswerQuestionsOutputSchema = z.object({
 });
 export type AnswerQuestionsOutput = z.infer<typeof AnswerQuestionsOutputSchema>;
 
-export async function answerQuestions(input: AnswerQuestionsInput) {
-  return answerQuestionsFlow(input);
+export async function answerQuestions(
+  input: AnswerQuestionsInput,
+  updateCallback: (chunk: string) => Promise<void>
+): Promise<AnswerQuestionsOutput> {
+  return answerQuestionsFlow(input, updateCallback);
 }
 
 const prompt = ai.definePrompt({
@@ -60,9 +63,9 @@ const answerQuestionsFlow = ai.defineFlow(
   {
     name: 'answerQuestionsFlow',
     inputSchema: AnswerQuestionsInputSchema,
-    outputSchema: z.any(),
+    outputSchema: AnswerQuestionsOutputSchema,
   },
-  async (input) => {
+  async (input, updateCallback) => {
     const {stream, response} = ai.generateStream({
         prompt: prompt.render(input)!,
         model: 'googleai/gemini-2.0-flash',
@@ -75,22 +78,14 @@ const answerQuestionsFlow = ai.defineFlow(
         }
     });
 
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        for await (const chunk of stream) {
-            const text = chunk.text;
-            if (text) {
-                controller.enqueue(text);
-            }
+    for await (const chunk of stream) {
+        const text = chunk.text;
+        if (text && updateCallback) {
+            await updateCallback(text);
         }
-        controller.close();
-      }
-    });
+    }
 
-    return new Response(readableStream, {
-        headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-        },
-    });
+    const finalResponse = await response;
+    return finalResponse.output!;
   }
 );
