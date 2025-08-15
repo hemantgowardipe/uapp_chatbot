@@ -34,6 +34,9 @@ const AnswerQuestionsOutputSchema = z.object({
       })
     )
     .describe('The sources used to answer the question.'),
+  suggestedQuestions: z
+    .array(z.string())
+    .describe('A list of 3-4 relevant follow-up questions that the user might want to ask.'),
 });
 export type AnswerQuestionsOutput = z.infer<typeof AnswerQuestionsOutputSchema>;
 
@@ -42,6 +45,8 @@ const prompt = ai.definePrompt({
   input: {schema: AnswerQuestionsInputSchema},
   output: {schema: AnswerQuestionsOutputSchema},
   prompt: `You are a helpful AI assistant for working with documents. Your tasks include answering questions, summarizing, analyzing, and providing suggestions based on the provided documents. When answering, you should primarily use the information within the documents. However, you can also use your general knowledge to provide helpful analysis, critiques, and suggestions for improvement. When you pull information directly from a document, you MUST cite your sources.
+
+After providing a thorough answer, you must suggest 3-4 relevant follow-up questions that the user might be interested in, based on the context of their question and the document content.
 
 Documents:
 {{#each documents}}

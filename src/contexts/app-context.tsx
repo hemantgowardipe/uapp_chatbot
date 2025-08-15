@@ -15,6 +15,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: React.ReactNode;
   sources?: AnswerQuestionsOutput['sources'];
+  suggestedQuestions?: string[];
 }
 
 interface AppContextType {

@@ -7,7 +7,7 @@ import { answerQuestions } from '@/ai/flows/answer-questions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 import ChatMessage from './chat-message';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -27,10 +27,7 @@ export default function ChatInterface() {
     }
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    
+  const processQuestion = async (question: string) => {
     if (documents.length === 0) {
       toast({
         variant: 'destructive',
@@ -39,23 +36,30 @@ export default function ChatInterface() {
       });
       return;
     }
-
-    const userMessageContent = input;
-    addMessage({ role: 'user', content: userMessageContent });
-    setInput('');
+    
     setIsLoading(true);
+    addMessage({ role: 'user', content: question });
 
+    // Hide suggestions on previous messages
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant' && lastMessage.suggestedQuestions) {
+        updateMessage(lastMessage.id, { suggestedQuestions: [] });
+      }
+    }
+    
     const assistantMessageId = addMessage({ role: 'assistant', content: '' });
 
     try {
       const finalResponse = await answerQuestions({
         documents: documents.map(({ name, content }) => ({ name, content })),
-        question: userMessageContent,
+        question: question,
       });
 
       updateMessage(assistantMessageId, {
         content: finalResponse.answer,
         sources: finalResponse.sources,
+        suggestedQuestions: finalResponse.suggestedQuestions,
       });
 
     } catch (error) {
@@ -73,6 +77,19 @@ export default function ChatInterface() {
     }
   };
 
+  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    const question = input;
+    setInput('');
+    await processQuestion(question);
+  };
+  
+  const handleSuggestedQuestion = async (question: string) => {
+    if (isLoading) return;
+    await processQuestion(question);
+  }
+
   return (
     <div className="flex h-screen flex-col">
       <header className="p-4 border-b flex items-center justify-between bg-background">
@@ -84,7 +101,12 @@ export default function ChatInterface() {
       <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
         <div className="space-y-6">
           {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
+            <ChatMessage
+              key={message.id}
+              message={message}
+              onSuggestedQuestion={handleSuggestedQuestion}
+              isProcessing={isLoading}
+            />
           ))}
           {isLoading && <ChatMessage isLoading />}
         </div>
