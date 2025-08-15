@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 export default function ChatInterface() {
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
-  const { documents, messages, addMessage, updateMessage, streamMessage } = useApp();
+  const { documents, messages, addMessage, updateMessage } = useApp();
   const { toast } = useToast();
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
@@ -46,17 +46,11 @@ export default function ChatInterface() {
     setIsLoading(true);
 
     const assistantMessageId = addMessage({ role: 'assistant', content: '' });
-    let accumulatedResponse = "";
 
     try {
       const finalResponse = await answerQuestions({
         documents: documents.map(({ name, content }) => ({ name, content })),
         question: userMessageContent,
-      }, async (chunk) => {
-        accumulatedResponse += chunk;
-        updateMessage(assistantMessageId, {
-            content: accumulatedResponse,
-        });
       });
 
       updateMessage(assistantMessageId, {
@@ -92,7 +86,7 @@ export default function ChatInterface() {
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
-          {isLoading && messages[messages.length-1]?.role !== 'assistant' && <ChatMessage isLoading />}
+          {isLoading && <ChatMessage isLoading />}
         </div>
       </ScrollArea>
       <div className="p-4 border-t bg-background">

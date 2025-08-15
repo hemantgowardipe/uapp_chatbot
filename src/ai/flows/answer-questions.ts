@@ -59,47 +59,13 @@ const answerQuestionsFlow = ai.defineFlow(
     outputSchema: AnswerQuestionsOutputSchema,
   },
   async (input) => {
-    const { response } = await ai.generate({
-        prompt: await prompt.render({input})!,
-        model: 'googleai/gemini-2.0-flash',
-        stream: false,
-        config: {
-            // @ts-ignore
-            output: {
-                format: 'json',
-                schema: AnswerQuestionsOutputSchema
-            },
-        }
-    });
-
-    return response.output()!;
+    const {output} = await prompt(input);
+    return output!;
   }
 );
 
-
 export async function answerQuestions(
-  input: AnswerQuestionsInput,
-  updateCallback: (chunk: string) => Promise<void>
+  input: AnswerQuestionsInput
 ): Promise<AnswerQuestionsOutput> {
-    const {stream, response} = ai.generateStream({
-        prompt: await prompt.render({input}),
-        model: 'googleai/gemini-2.0-flash',
-        config: {
-            // @ts-ignore
-            output: {
-                format: 'json',
-                schema: AnswerQuestionsOutputSchema
-            },
-        }
-    });
-
-    for await (const chunk of stream) {
-        const text = chunk.text;
-        if (text && updateCallback) {
-            await updateCallback(text);
-        }
-    }
-
-    const finalResponse = await response;
-    return finalResponse.output!;
+  return answerQuestionsFlow(input);
 }
