@@ -5,6 +5,8 @@ import type { Message } from '@/contexts/app-context';
 import { User, Bot, FileText } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessageProps {
   message?: Message;
@@ -48,7 +50,32 @@ export default function ChatMessage({ message, isLoading = false }: ChatMessageP
           ? 'bg-card text-card-foreground'
           : 'bg-primary text-primary-foreground'
       )}>
-        <div className="prose prose-sm max-w-none text-inherit whitespace-pre-wrap">{message.content}</div>
+        {typeof message.content === 'string' && isAssistant ? (
+            <ReactMarkdown
+              className="prose prose-sm max-w-none text-inherit prose-p:whitespace-pre-wrap"
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary underline" />,
+                p: ({node, ...props}) => <p {...props} className="mb-2 last:mb-0" />,
+                ul: ({node, ...props}) => <ul {...props} className="list-disc pl-5 mb-2" />,
+                ol: ({node, ...props}) => <ol {...props} className="list-decimal pl-5 mb-2" />,
+                li: ({node, ...props}) => <li {...props} className="mb-1" />,
+                blockquote: ({node, ...props}) => <blockquote {...props} className="border-l-4 border-muted-foreground/50 pl-4 italic" />,
+                code: ({node, inline, className, children, ...props}) => {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return !inline ? (
+                    <code {...props} className="block bg-background/50 p-2 rounded-md my-2 whitespace-pre-wrap">{children}</code>
+                  ) : (
+                    <code {...props} className="bg-muted px-1 py-0.5 rounded-sm font-mono">{children}</code>
+                  )
+                }
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+        ) : (
+          <div className="prose prose-sm max-w-none text-inherit whitespace-pre-wrap">{message.content}</div>
+        )}
         {isAssistant && message.sources && message.sources.length > 0 && (
           <div className="pt-2">
             <Accordion type="single" collapsible className="w-full">
