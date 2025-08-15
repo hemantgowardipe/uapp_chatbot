@@ -37,13 +37,6 @@ const AnswerQuestionsOutputSchema = z.object({
 });
 export type AnswerQuestionsOutput = z.infer<typeof AnswerQuestionsOutputSchema>;
 
-export async function answerQuestions(
-  input: AnswerQuestionsInput,
-  updateCallback: (chunk: string) => Promise<void>
-): Promise<AnswerQuestionsOutput> {
-  return answerQuestionsFlow(input, updateCallback);
-}
-
 const prompt = ai.definePrompt({
   name: 'answerQuestionsPrompt',
   input: {schema: AnswerQuestionsInputSchema},
@@ -65,7 +58,29 @@ const answerQuestionsFlow = ai.defineFlow(
     inputSchema: AnswerQuestionsInputSchema,
     outputSchema: AnswerQuestionsOutputSchema,
   },
-  async (input, updateCallback) => {
+  async (input) => {
+    const { response } = await ai.generate({
+        prompt: prompt.render(input)!,
+        model: 'googleai/gemini-2.0-flash',
+        stream: false,
+        config: {
+            // @ts-ignore
+            output: {
+                format: 'json',
+                schema: AnswerQuestionsOutputSchema
+            },
+        }
+    });
+
+    return response.output()!;
+  }
+);
+
+
+export async function answerQuestions(
+  input: AnswerQuestionsInput,
+  updateCallback: (chunk: string) => Promise<void>
+): Promise<AnswerQuestionsOutput> {
     const {stream, response} = ai.generateStream({
         prompt: prompt.render(input)!,
         model: 'googleai/gemini-2.0-flash',
@@ -87,5 +102,4 @@ const answerQuestionsFlow = ai.defineFlow(
 
     const finalResponse = await response;
     return finalResponse.output!;
-  }
-);
+}
