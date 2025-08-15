@@ -60,7 +60,7 @@ const answerQuestionsFlow = ai.defineFlow(
   },
   async (input) => {
     const { response } = await ai.generate({
-        prompt: prompt.render(input)!,
+        prompt: await prompt.render({input})!,
         model: 'googleai/gemini-2.0-flash',
         stream: false,
         config: {
@@ -82,7 +82,7 @@ export async function answerQuestions(
   updateCallback: (chunk: string) => Promise<void>
 ): Promise<AnswerQuestionsOutput> {
     const {stream, response} = ai.generateStream({
-        prompt: prompt.render(input)!,
+        prompt: await prompt.render({input}),
         model: 'googleai/gemini-2.0-flash',
         config: {
             // @ts-ignore
