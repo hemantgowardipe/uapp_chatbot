@@ -107,7 +107,7 @@ export default function ChatMessage({ message, isLoading = false, isProcessing =
                         )}
                         {source.image && (
                            <Image 
-                            src={source.image} 
+                            src={source.image.trimEnd()} 
                             alt={`Source image from ${source.documentName}`}
                             width={500}
                             height={300}
