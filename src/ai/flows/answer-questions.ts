@@ -54,6 +54,7 @@ Documents:
   Document Name: {{this.name}}
   Content: {{this.content}}
   {{#if this.images}}
+    Images from the document are provided below. You can see them and should describe them if asked.
     {{#each this.images}}
       {{media url=this}}
     {{/each}}
