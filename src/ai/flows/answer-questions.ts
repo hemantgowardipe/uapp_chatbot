@@ -32,10 +32,9 @@ const AnswerQuestionsOutputSchema = z.object({
       z.object({
         documentName: z.string().describe('The name of the document.'),
         snippet: z.string().describe('The relevant snippet from the document.'),
-        image: z.string().optional().describe('The data URI of the image source, if applicable.'),
       })
     )
-    .describe('The sources used to answer the question. If the source is an image, include the data URI.'),
+    .describe('The sources used to answer the question.'),
   suggestedQuestions: z
     .array(z.string())
     .describe('A list of 3-4 relevant follow-up questions that the user might want to ask.'),
@@ -51,8 +50,7 @@ const prompt = ai.definePrompt({
 When you answer, you MUST adhere to the following rules:
 1.  Base your answers primarily on the information within the provided documents.
 2.  If you use information directly from a document, you MUST cite your source.
-3.  When citing a source that is an image, you MUST include the image's data URI in the 'image' field of the source object.
-4.  For the 'snippet' field in a citation, provide a direct quote or a concise description of the information you used from the source.
+3.  For the 'snippet' field in a citation, provide a direct quote or a concise description of the information you used from the source.
 
 After providing a thorough answer, you must suggest 3-4 relevant follow-up questions that the user might be interested in, based on the context of their question and the document content.
 
@@ -61,7 +59,7 @@ Documents:
   Document Name: {{this.name}}
   Content: {{this.content}}
   {{#if this.images}}
-    Images from the document are provided below. You can see them and should describe them if asked. When you cite an image as a source, include its data URI.
+    Images from the document are provided below. You can see them and should describe them if asked.
     {{#each this.images}}
       {{media url=this}}
     {{/each}}
