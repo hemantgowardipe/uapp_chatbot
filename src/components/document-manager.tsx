@@ -10,16 +10,32 @@ import * as pdfjsLib from 'pdfjs-dist';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-async function extractTextFromPDF(file: File): Promise<string> {
+async function extractContentFromPDF(file: File): Promise<{text: string, images: string[]}> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
   let text = '';
+  const images: string[] = [];
+
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(item => ('str' in item ? item.str : '')).join(' ') + '\n';
+    
+    // Extract text content
+    const textContent = await page.getTextContent();
+    text += textContent.items.map(item => ('str' in item ? item.str : '')).join(' ') + '\n';
+    
+    // Render page to canvas and get image data URI
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) continue;
+
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+    images.push(canvas.toDataURL('image/jpeg'));
   }
-  return text;
+  return {text, images};
 }
 
 
@@ -45,30 +61,41 @@ export default function DocumentManager() {
     }
 
     try {
-        let content = '';
         if (file.type === 'application/pdf') {
-            content = await extractTextFromPDF(file);
+            const { text, images } = await extractContentFromPDF(file);
+            if (text || images.length > 0) {
+              addDocument({ name: file.name, content: text, images });
+              toast({
+                  title: "Success",
+                  description: `Document "${file.name}" uploaded successfully.`,
+              });
+            } else {
+               toast({
+                variant: "destructive",
+                title: "Upload Error",
+                description: `Could not extract content from "${file.name}".`,
+            });
+            }
         } else {
-            content = await new Promise((resolve, reject) => {
+            const content = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target?.result as string);
                 reader.onerror = (e) => reject(new Error("Failed to read the file."));
                 reader.readAsText(file);
             });
-        }
-        
-        if (content) {
-            addDocument({ name: file.name, content });
-            toast({
-                title: "Success",
-                description: `Document "${file.name}" uploaded successfully.`,
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Upload Error",
-                description: `Could not extract content from "${file.name}".`,
-            });
+            if (content) {
+                addDocument({ name: file.name, content });
+                toast({
+                    title: "Success",
+                    description: `Document "${file.name}" uploaded successfully.`,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Upload Error",
+                    description: `Could not extract content from "${file.name}".`,
+                });
+            }
         }
     } catch (error) {
         console.error("File processing error:", error);

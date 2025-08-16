@@ -8,6 +8,7 @@ export interface Document {
   id: string;
   name: string;
   content: string;
+  images?: string[];
 }
 
 export interface Message {

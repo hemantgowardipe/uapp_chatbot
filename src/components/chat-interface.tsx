@@ -52,7 +52,7 @@ export default function ChatInterface() {
 
     try {
       const finalResponse = await answerQuestions({
-        documents: documents.map(({ name, content }) => ({ name, content })),
+        documents: documents.map(({ name, content, images }) => ({ name, content, images })),
         question: question,
       });
 

@@ -16,7 +16,8 @@ const AnswerQuestionsInputSchema = z.object({
     .array(
       z.object({
         name: z.string().describe('The name of the document.'),
-        content: z.string().describe('The content of the document.'),
+        content: z.string().describe('The text content of the document.'),
+        images: z.array(z.string()).optional().describe('An array of page images as data URIs.')
       })
     )
     .describe('The documents to answer questions from.'),
@@ -44,7 +45,7 @@ const prompt = ai.definePrompt({
   name: 'answerQuestionsPrompt',
   input: {schema: AnswerQuestionsInputSchema},
   output: {schema: AnswerQuestionsOutputSchema},
-  prompt: `You are a helpful AI assistant for working with documents. Your tasks include answering questions, summarizing, analyzing, and providing suggestions based on the provided documents. When answering, you should primarily use the information within the documents. However, you can also use your general knowledge to provide helpful analysis, critiques, and suggestions for improvement. When you pull information directly from a document, you MUST cite your sources.
+  prompt: `You are a helpful AI assistant for working with documents. Your tasks include answering questions, summarizing, analyzing, providing suggestions, and describing images based on the provided documents. When answering, you should primarily use the information within the documents. However, you can also use your general knowledge to provide helpful analysis, critiques, and suggestions for improvement. When you pull information directly from a document, you MUST cite your sources.
 
 After providing a thorough answer, you must suggest 3-4 relevant follow-up questions that the user might be interested in, based on the context of their question and the document content.
 
@@ -52,6 +53,11 @@ Documents:
 {{#each documents}}
   Document Name: {{this.name}}
   Content: {{this.content}}
+  {{#if this.images}}
+    {{#each this.images}}
+      {{media url=this}}
+    {{/each}}
+  {{/if}}
 {{/each}}
 
 Question: {{question}}`,
