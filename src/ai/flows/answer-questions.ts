@@ -32,9 +32,10 @@ const AnswerQuestionsOutputSchema = z.object({
       z.object({
         documentName: z.string().describe('The name of the document.'),
         snippet: z.string().describe('The relevant snippet from the document.'),
+        image: z.string().optional().describe('The data URI of the image source, if applicable.'),
       })
     )
-    .describe('The sources used to answer the question.'),
+    .describe('The sources used to answer the question. If the source is an image, include the data URI.'),
   suggestedQuestions: z
     .array(z.string())
     .describe('A list of 3-4 relevant follow-up questions that the user might want to ask.'),
@@ -45,7 +46,7 @@ const prompt = ai.definePrompt({
   name: 'answerQuestionsPrompt',
   input: {schema: AnswerQuestionsInputSchema},
   output: {schema: AnswerQuestionsOutputSchema},
-  prompt: `You are a helpful AI assistant for working with documents. Your tasks include answering questions, summarizing, analyzing, providing suggestions, and describing images based on the provided documents. When answering, you should primarily use the information within the documents. However, you can also use your general knowledge to provide helpful analysis, critiques, and suggestions for improvement. When you pull information directly from a document, you MUST cite your sources.
+  prompt: `You are a helpful AI assistant for working with documents. Your tasks include answering questions, summarizing, analyzing, providing suggestions, and describing images based on the provided documents. When answering, you should primarily use the information within the documents. However, you can also use your general knowledge to provide helpful analysis, critiques, and suggestions for improvement. When you pull information directly from a document, you MUST cite your sources. If the source is an image, include the image data URI in your citation.
 
 After providing a thorough answer, you must suggest 3-4 relevant follow-up questions that the user might be interested in, based on the context of their question and the document content.
 
@@ -54,7 +55,7 @@ Documents:
   Document Name: {{this.name}}
   Content: {{this.content}}
   {{#if this.images}}
-    Images from the document are provided below. You can see them and should describe them if asked.
+    Images from the document are provided below. You can see them and should describe them if asked. When you cite an image, you MUST include its data URI in the source.
     {{#each this.images}}
       {{media url=this}}
     {{/each}}

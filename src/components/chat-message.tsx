@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from './ui/button';
+import Image from 'next/image';
 
 interface ChatMessageProps {
   message?: Message;
@@ -94,14 +95,25 @@ export default function ChatMessage({ message, isLoading = false, isProcessing =
                   <AccordionContent>
                     <div className="space-y-2 mt-2">
                     {message.sources.map((source, index) => (
-                      <div key={index} className="p-2 border rounded-md bg-background/50 text-sm">
+                      <div key={index} className="p-2 border rounded-md bg-background/50 text-sm space-y-2">
                         <p className="font-semibold flex items-center gap-2">
                           <FileText className="h-4 w-4 text-primary" />
                           {source.documentName}
                         </p>
-                        <blockquote className="mt-1 border-l-2 pl-2 italic text-muted-foreground">
-                          "{source.snippet}"
-                        </blockquote>
+                        {source.snippet && (
+                          <blockquote className="border-l-2 pl-2 italic text-muted-foreground">
+                            "{source.snippet}"
+                          </blockquote>
+                        )}
+                        {source.image && (
+                           <Image 
+                            src={source.image} 
+                            alt={`Source image from ${source.documentName}`}
+                            width={500}
+                            height={300}
+                            className="rounded-md border object-contain"
+                           />
+                        )}
                       </div>
                     ))}
                     </div>
